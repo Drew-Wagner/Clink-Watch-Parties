@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+
+    </style>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet">
+    <script src="thirdparty/jquery.min.js"></script>
+    <script src="thirdparty/socket.io.js"></script>
+  </head>
+  <body>
+    <div class="container py-3" style="width: 20rem">
+        <div class="row">
+          <div class="col-auto">
+            <img src="images/icon64.png" />
+          </div>
+          <div class="col-grow">
+            <h5>Clink!</h5>
+            <h6 class="mb-2 text-muted">Get the party started!</h6>
+          </div>
+        </div>
+        <form action="">
+          <div id="party-info-group" class="form-group">
+            <label for="party-name">Party name:</label>
+            <input class="form-control" id="party-name" />
+            <small id="party-name-error" class="form-text text-danger">
+            </small>
+          </div>
+          <div id="share-link-group" class="form-group d-none">
+            <p>
+              You're good to go! Just share the following link with your friends, and remind them to click the Amazon Party icon to sign in to the party.
+            </p>
+            <input readonly class="form-control" id="share-link" />
+            <small id="copyLink" class="form-text text-muted">
+              Click to copy link
+            </small>
+          </div>
+          <div class="form-group text-center">
+            <button id="submit-btn" type="submit" class="px-4 btn btn-primary">Start</button>
+          </div>
+        </form>
+        <div class="row justify-content-center">
+          <small class="col-12 text-caption text-muted text-center">
+            Currently supported
+          </small>
+          <div class="col-3">
+            <img class="img-fluid" src="images/320px-Amazon_Prime_Video_logo.svg.png" />
+          </div>
+        </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

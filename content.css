@@ -1,0 +1,107 @@
+.dv-player-fullscreen.clink-show-chat {
+  width: calc(100% - 300px) !important;
+}
+
+.clink-chat-open {
+  display: block;
+  z-index: 9999;
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 300px;
+
+  color: #ffffffdc;
+  background: #212121;
+}
+
+.clink-chat {
+  font-size: 14px;
+}
+
+.clink-chat .clink-header {
+}
+
+.clink-chat .clink-message-wrapper {
+  overflow-y: scroll;
+  background: #121212;
+  border-radius: 8px;
+}
+
+.clink-chat .clink-message-wrapper::-webkit-scrollbar {
+  width: 4px;
+}
+
+.clink-chat .clink-message-wrapper::-webkit-scrollbar-track {
+  background: #121212;
+}
+
+.clink-chat .clink-message-wrapper::-webkit-scrollbar-thumb {
+  background: #ff6978de;
+}
+
+.clink-chat .clink-message-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #ff6978;
+}
+
+.typing-indicator p {
+  min-height: 21px;
+}
+
+.avatar {
+  border-radius: 100%;
+}
+
+.avatar-btn {
+  position: relative;
+  cursor: pointer;
+}
+
+.avatar-btn .overlay {
+  transition: .5s ease;
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 100%;
+  background: #fff;
+  text-align: center;
+}
+
+.avatar-btn:hover .overlay {
+  opacity: 0.2;
+}
+
+
+.text-accent {
+  color: #ff6978de;
+}
+
+.btn-dark.text-accent {
+  background: transparent;
+  border: none;
+}
+
+.btn-dark.text-accent:focus, .btn-dark.text-accent:active:focus {
+  color: #ff6978de;
+  box-shadow: none !important;;
+}
+
+.btn-dark.text-accent:hover {
+  border: none;
+}
+
+
+.form-control, .form-control:focus {
+  color: #ff6978de !important;
+}
+
+.form-control:focus {
+  box-shadow: 0 0 0 0.1rem #ff6978de !important;
+}
+
+.list-group-item {
+  background: transparent !important;
+  color: #fff8;
+}
