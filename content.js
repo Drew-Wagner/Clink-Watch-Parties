@@ -8,6 +8,9 @@ $(document).ready(() => {
         name: request.nickname, 
         avatar: request.avatar // TODO random;
       }
+
+      const USERS = {
+      }
   
       const socket = io(`https://clink-watch-party.herokuapp.com/party-${partyName}`);
       socket.emit('join party', user);
@@ -18,20 +21,26 @@ $(document).ready(() => {
       $('#clink-header-party-name').text(partyName);
       setHeaderAvatar(user.avatar);
   
-      socket.on('join party', (u) => {
+      socket.on('join party', (id, u) => {
+        USERS[id] = u;
         appendNotication(`${u.name} joined the party!`);
       });
   
-      socket.on('leave party', (u) => {
+      socket.on('leave party', (id, u) => {
         appendNotication(`${u.name} left the party.`);
       })
   
-      socket.on('update user', (u) => {
+      socket.on('update user', (id, u) => {
+        USERS[id] = u;
         appendNotication(`${u.name} changed their name.`);
       })
   
-      socket.on('send message', (u, message) => {
-        appendMessage(message, u.avatar, u.name);
+      socket.on('send message', (id, message) => {
+        if (USERS[id]) {
+          appendMessage(message, USERS[id].avatar, USERS[id].name);
+        } else {
+          appendMessage(message, 'whiskey', 'Unknown');
+        }
       })
   
       var typing = 0;
@@ -76,6 +85,7 @@ $(document).ready(() => {
         e.preventDefault();
         const msg = $('#clink-chat-textarea').val();
         $('#clink-chat-textarea').val('');
+        console.log('append message');
         appendMessage(msg, user.avatar, user.name);
         socket.emit('send message', msg);
       });
@@ -117,19 +127,19 @@ $(document).ready(() => {
         appendNotication(`${user.name} jumped forward to ${(video.currentTime / 3600).toFixed()}:${(video.currentTime / 60).toFixed()}:${(video.currentTime).toFixed(2)}.`);
       })
 
-      socket.on('pause', (u) => {
+      socket.on('pause', (id) => {
         pauseCommand = true;
         video.pause();
-        appendNotication(`${u.name} paused the video.`);
+        appendNotication(`${USERS[id].name} paused the video.`);
       });
 
-      socket.on('play', (u) => {
+      socket.on('play', (id) => {
         playCommand = true;
         video.play();
-        appendNotication(`${u.name} started playing the video.`);
+        appendNotication(`${USERS[id].name} started playing the video.`);
       });
 
-      socket.on('seeked', (u, timeStamp) => {
+      socket.on('seeked', (id, timeStamp) => {
         playCommand = true;
         video.play();
         seekCommand = true;
@@ -143,7 +153,7 @@ $(document).ready(() => {
           playCommand = true;
           video.play();
         }
-        appendNotication(`${u.name} jumped forward to ${(timeStamp / 3600).toFixed()}:${((timeStamp % 3600)/60).toFixed()}:${(timeStamp % 60).toFixed(2)}.`);
+        appendNotication(`${USERS[id].name} jumped forward to ${(timeStamp / 3600).toFixed()}:${((timeStamp % 3600)/60).toFixed()}:${(timeStamp % 60).toFixed(2)}.`);
       });
     }
   });  
@@ -181,16 +191,16 @@ function injectChat () {
       Sorry :( User settings aren't implemented yet...
       </div>
     </div>
-    <div class="col clink-message-wrapper">
+    <div class="col clink-message-wrapper" style="position: relative;">
       <ul id="clink-messages" class="list-group">
-        <li class="list-group-item px-0 border-0 typing-indicator">
-          <p class="mb-0 text-accent"></p>
-        </li>
       </ul>
+      <div class="px-0 border-0 typing-indicator">
+        <p class="mb-0 text-accent">Someone is typing</p>
+      </div>
     </div>
     <div class="col-auto clink-chat-input-wrapper">
       <form id="clink-chat-form" class="form-inline row mx-0 no-gutters mt-2">
-        <textarea style="resize: none;" class="col mr-1 form-control bg-dark border-dark" id="clink-chat-textarea" rows="1"></textarea>
+        <textarea style="resize: none;" class="col mr-2 form-control bg-dark border-dark" id="clink-chat-textarea" rows="1"></textarea>
         <div class="col-auto">
           <button type="submit" class="btn btn-sm btn-dark rounded-circle text-accent">
           <i style="margin-left: -4px;" class="text-accent fas fa-paper-plane"></i>
@@ -248,7 +258,7 @@ function typeWriter(target, txt, i, speed) {
 }
 
 function appendNotication(msg) {
- $('#clink-messages .typing-indicator').before(
+ $('#clink-messages').append(
 `
 <li class="list-group-item px-0 border-0">
   <p class="mb-0 text-accent">${msg}</p>
@@ -258,7 +268,10 @@ function appendNotication(msg) {
 }
 
 function appendMessage(msg, avatar, name) {
-  $('#clink-messages .typing-indicator').before(
+  if (msg.startsWith('\\GIF:')) {
+    msg = `<img src="${msg.substring(5)}"/>`
+  }
+  $('#clink-messages').append(
 `
 <li class="list-group-item px-0 border-0">
 <div class="row align-items-start">
@@ -277,6 +290,7 @@ function appendMessage(msg, avatar, name) {
 </li>
 `
   )
+
   $('.clink-message-wrapper').animate({
     scrollTop: $('#clink-messages').height()
   }, 250);
