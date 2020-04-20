@@ -1,6 +1,6 @@
 console.debug('CONTENT.JS IS RUNNING');
 // DECLARE GLOBAL VARIABLES
-const base_url = "http://localhost:5000"
+const base_url = "https://clink-watch-party.herokuapp.com"
 
 var USERS = {
 };
