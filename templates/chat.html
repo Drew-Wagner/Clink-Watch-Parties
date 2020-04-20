@@ -1,0 +1,28 @@
+<div class="d-flex flex-column no-gutters w-100 h-100">
+  <div class="col-auto">
+    <div class="clink-header row px-2 flex-nowrap align-items-center">
+      <div class="col flex-grow-1"> 
+        <h6 class="text-accent mb-0">Clink!</h6>
+        <h4 class="clink-party-name mb-2"></h4>
+      </div>
+      <div class="col-auto">
+        <img class="avatar-img" />
+      </div>
+    </div>
+  </div>
+  <div class="col position-relative">
+    <ul class="clink-chat list-group">
+    </ul>
+    <div class="d-none p-2 typing-indicator position-absolute" style="z-index: 10000; bottom: 0">
+      <small class="text-accent">Someone is typing</small>
+    </div>
+  </div>
+  <div class="col-auto">
+    <form id="clink-chat-form" class="row no-gutters mt-2 form-inline">
+      <textarea style="resize: none;" rows="1" class="col text-accent-bright form-control px-2 bg-dark"></textarea>
+      <button type="submit" class="col-auto ml-2 px-3 btn btn-dark">
+        <i class="fas fa-paper-plane text-accent"></i>
+      </button>
+    </form>
+  </div>
+</div>

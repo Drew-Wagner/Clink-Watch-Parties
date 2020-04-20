@@ -1,297 +1,312 @@
-$(document).ready(() => {
-  chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    if (request.partyName && window.contentScriptInjected !== true) {
-      window.contentScriptInjected = true;
+console.debug('CONTENT.JS IS RUNNING');
+// DECLARE GLOBAL VARIABLES
+const base_url = "http://localhost:5000"
 
-      const partyName = request.partyName;
-      var user = {
-        name: request.nickname, 
-        avatar: request.avatar // TODO random;
-      }
+var USERS = {
+};
 
-      const USERS = {
-      }
-  
-      const socket = io(`https://clink-watch-party.herokuapp.com/party-${partyName}`);
-      socket.emit('join party', user);
-  
-      injectChat();
-      $('.typing-indicator').addClass('invisible');
-      typeWriter($('.typing-indicator p'), 'Someone is typing...', 0, 50);
-      $('#clink-header-party-name').text(partyName);
-      setHeaderAvatar(user.avatar);
-  
-      socket.on('join party', (id, u) => {
-        USERS[id] = u;
-        appendNotication(`${u.name} joined the party!`);
-      });
-  
-      socket.on('leave party', (id, u) => {
-        appendNotication(`${u.name} left the party.`);
-      })
-  
-      socket.on('update user', (id, u) => {
-        USERS[id] = u;
-        appendNotication(`${u.name} changed their name.`);
-      })
-  
-      socket.on('send message', (id, message) => {
-        if (USERS[id]) {
-          appendMessage(message, USERS[id].avatar, USERS[id].name);
-        } else {
-          appendMessage(message, 'whiskey', 'Unknown');
-        }
-      })
-  
-      var typing = 0;
-      socket.on('typing', (v) => {
-        if (v) {
-          typing++;
-        } else {
-          typing--;
-        }
-        if (typing == 0) {
-          $('.typing-indicator').addClass('invisible');
-        } else {
-          $('.typing-indicator').removeClass('invisible');
-        }
-      })
-  
-      $('#clink-chat-textarea').keydown((e) => {
-        if (e.keyCode == 13) {
-          if (e.ctrlKey) {
-            // emulate enter
-            return false;
-          }
-  
-          e.preventDefault();
-  
-          $('#clink-chat-form').submit();  
-        }
-      })
-  
-      var typingTimeout;
-      $('#clink-chat-textarea').on('input', (e) => {
-        clearTimeout(typingTimeout);
-        if (!typingTimeout)
-          socket.emit('typing', true);
-        typingTimeout = setTimeout(() => {
-          socket.emit('typing', false);
-          typingTimeout = null;
-        }, 500)
-      });
-  
-      $('#clink-chat-form').submit((e) => {
-        e.preventDefault();
-        const msg = $('#clink-chat-textarea').val();
-        $('#clink-chat-textarea').val('');
-        console.log('append message');
-        appendMessage(msg, user.avatar, user.name);
-        socket.emit('send message', msg);
-      });
-  
-      $('#clink-header-avatar-btn').click((e) => {
-        e.preventDefault();
-  
-        $('#clink-user-settings').toggleClass('d-none');
-      })
+var mapSockIDtoUserID = {
 
-      var video = $('video')[0];
-      var playCommand = false;
-      var pauseCommand = false;
-      var seekCommand = false;
-      video.addEventListener('pause', () => {
-        if (pauseCommand) {
-          pauseCommand = false;
-          return;
-        }
-        console.log('pause')
-        socket.emit('pause');
-        appendNotication(`${user.name} paused the video.`);
-      })
-      video.addEventListener('playing', () => {
-        if (playCommand) {
-          playCommand = false;
-          return;
-        }
-        console.log('play')
-        socket.emit('play');
-        appendNotication(`${user.name} started playing the video.`);
-      })
-      video.addEventListener('seeked', (e) => {
-        if (seekCommand) {
-          seekCommand = false;
-          return;
-        }
-        socket.emit('seeked', video.currentTime);
-        appendNotication(`${user.name} jumped forward to ${(video.currentTime / 3600).toFixed()}:${(video.currentTime / 60).toFixed()}:${(video.currentTime).toFixed(2)}.`);
-      })
+}
 
-      socket.on('pause', (id) => {
-        pauseCommand = true;
-        video.pause();
-        appendNotication(`${USERS[id].name} paused the video.`);
-      });
+var saveMessages = null;
 
-      socket.on('play', (id) => {
-        playCommand = true;
-        video.play();
-        appendNotication(`${USERS[id].name} started playing the video.`);
-      });
+var global_socket = io(base_url);
+var myUUID;
 
-      socket.on('seeked', (id, timeStamp) => {
-        playCommand = true;
-        video.play();
-        seekCommand = true;
-        video.currentTime = timeStamp + 10;
-        pauseCommand = true;
+var partyName;
+var party_socket;
 
-        var wasPaused = video.paused;
+var showClink = false;
+var typingCount = 0;
 
-        video.pause();
-        if (!wasPaused) {
-          playCommand = true;
-          video.play();
-        }
-        appendNotication(`${USERS[id].name} jumped forward to ${(timeStamp / 3600).toFixed()}:${((timeStamp % 3600)/60).toFixed()}:${(timeStamp % 60).toFixed(2)}.`);
-      });
+var blockEvent = {
+  play: false,
+  pause: false,
+  seek: false
+}
+// ------------------------
+
+var video;
+
+global_socket.emit('get uuid', (id) => {
+  myUUID = id;
+
+  chrome.storage.local.get(['savedUser'], (res) => {
+    if (res.savedUser) {
+      USERS[myUUID] = res.savedUser;
+    } else {
+      // Random user
+      USERS[myUUID] = {
+        name: 'Anonymous Martini',
+        avatar: 'martini'
+      };
+      chrome.storage.local.set({ savedUser: USERS[myUUID]});
     }
-  });  
+    injectClink();
+    injectJoinParty();
+  })
+})
+
+chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
+  if (req.command) {
+    if (req.command == 'toggle clink') {
+        video = document.querySelector('video');
+        if (!video) {
+          alert('Video element not found. Please reload the page, and wait for the video to load before activating Clink!');
+        } else {
+          toggleClink();
+        }
+    }
+  }
 });
 
-function setHeaderAvatar (avatar) {
-  $('#clink-header-avatar-btn img')
-    .addClass(`avatar-${avatar}`)
-    .attr('src', chrome.extension.getURL(`images/avatars/${avatar}.png`));
+function toggleClink() {
+  showClink = !showClink;
+  $('#clink-container').toggleClass('clink-show');
+  $('#dv-web-player').toggleClass('clink-show');
+};
+
+function injectClink() {
+  console.log('injecting Clink');
+  $('#dv-web-player').after('<div id="clink-container" class="p-2">');
 }
 
-function injectChat () {
-  $('#dv-web-player').addClass('clink-show-chat');
+function injectChat() {
+  $('#clink-container').load(
+    chrome.runtime.getURL('templates/chat.html'),
+    () => {
+      $('.clink-header .avatar-img').attr('data-user-id', myUUID);
+      $('.clink-header .clink-party-name').text(partyName);
+      updateAvatars (myUUID);
 
-  if ($('.clink-chat').length == 0) {
-    $('#dv-web-player').after(`
-  <div class="clink-chat clink-chat-open d-flex flex-column px-1 py-2">
-    <div class="col-auto">
-      <div class="clink-header mb-2 row">
-        <div class="col align-self-end"> 
-          <div class="text-accent">Clink!</div>
-          <div>
-            <h4 id="clink-header-party-name"/>
-          </div>
-        </div>
-        <div class="col-auto align-self-center">
-          <div id="clink-header-avatar-btn" class="avatar-btn">
-            <img class="avatar" src="" />
-            <div class="overlay">
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="clink-user-settings" class="d-none row mb-2">
-      Sorry :( User settings aren't implemented yet...
-      </div>
-    </div>
-    <div class="col clink-message-wrapper" style="position: relative;">
-      <ul id="clink-messages" class="list-group">
-      </ul>
-      <div class="px-0 border-0 typing-indicator">
-        <p class="mb-0 text-accent">Someone is typing</p>
-      </div>
-    </div>
-    <div class="col-auto clink-chat-input-wrapper">
-      <form id="clink-chat-form" class="form-inline row mx-0 no-gutters mt-2">
-        <textarea style="resize: none;" class="col mr-2 form-control bg-dark border-dark" id="clink-chat-textarea" rows="1"></textarea>
-        <div class="col-auto">
-          <button type="submit" class="btn btn-sm btn-dark rounded-circle text-accent">
-          <i style="margin-left: -4px;" class="text-accent fas fa-paper-plane"></i>
-          </button>
-        </div>
-      </form>
-  </div>
-    `);
+      if (saveMessages) {
+        saveMessages.appendTo('.clink-chat');
+        updateAvatars(myUUID);
+        saveMessages = null;
+      }
+
+      configureChatListeners();
+    }
+  );
+}
+
+function injectJoinParty() {
+  $('#clink-container').load(
+    chrome.runtime.getURL('templates/join_party.html'),
+    () => {
+      $('.clink-logo-large').attr('src',
+        chrome.runtime.getURL('images/icon128.png')
+      )
+      $('.avatar-selection img').each((i, el) => {
+        $(el).attr('src',
+          chrome.runtime.getURL(`images/avatars/${$(el).data('avatar-name')}.png`)
+        );
+      });
+
+      if (!partyName) {
+        var query = new URLSearchParams(window.location.search);
+        $('#party-name').val(query.get('party_name'));  
+      } else {
+        $('#party-name').val(partyName).prop("disabled", true);
+      }
+
+      configureJoinPartyListeners();
+    }
+  );
+}
+
+function configureJoinPartyListeners() {
+  $('form').submit((e) => {
+    e.preventDefault();
+
+    USERS[myUUID].name = $('#name-selection').val();
+    USERS[myUUID].avatar = $('.avatar-selection :checked').val();
+
+    // Open socket
+    if (!party_socket) {
+      partyName = $('#party-name').val();
+      setupPartySocket();
+    } else {
+      party_socket.emit('update user', myUUID, USERS[myUUID]);
+    }
+    injectChat();
+  })
+}
+
+function setupPartySocket() {
+  party_socket = io(base_url + '/party-' + partyName);
+  party_socket.emit('join party', myUUID, USERS[myUUID]);
+
+  party_socket.on('join party', (sockID, userID, user) => {
+    USERS[userID] = user;
+    mapSockIDtoUserID[sockID] = userID;
+
+    appendNotification(`${user.name} joined the party!`);
+  });
+
+  party_socket.on('attendance', () => {
+    party_socket.emit('present', myUUID, USERS[myUUID]);
+  });
+
+  party_socket.on('present', (sockID, userID, user) => {
+    console.log('someone is here', userID, user);
+
+    appendNotification(`${user.name} is here.`);
+    USERS[userID] = user;
+    mapSockIDtoUserID[sockID] = userID;
+  });
+
+  party_socket.on('leave party', (sockID) => {
+    let userID = mapSockIDtoUserID[sockID];
+    if (userID) {
+      appendNotification(`${USERS[userID].name} left the party.`);
+      delete USERS[userID];
+      delete mapSockIDtoUserID[sockID];
+    } else {
+      appendNotification(`Someone left the party. (We don't know who)`);
+    }
+  });
+
+  party_socket.on('update user', (sockID, userID, user) => {
+    if (user.name != USERS[userID].name) {
+      appendNotification(`${USERS[userID].name} changed their name to ${user.name}.`);
+    } else if (user.avatar != USERS[userID].avatar) {
+      appendNotification(`${USERS[userID].name} changed their avatar.`);
+    }
+    USERS[userID] = user;
+    updateAvatars(userID);
+
+    mapSockIDtoUserID[sockID] = userID;
+  });
+
+  party_socket.on('send message', (sockID, userID, message) => {
+    mapSockIDtoUserID[sockID] = sockID;
+
+    appendMessage(userID, message);
+  });
+
+  party_socket.on('typing', (v) => {
+    if (v) {
+      typingCount++;
+      $('.typing-indicator').removeClass('d-none');
+    } else {
+      if (--typingCount == 0) {
+        $('.typing-indicator').addClass('d-none');
+      }
+    }
+  })
+
+  party_socket.on('play', (userID) => {
+    appendNotification(`${USERS[userID].name} started playing the video.`);
+    blockEvent.play = true;
+    video.play();
+  });
+  party_socket.on('pause', (userID) => {
+    appendNotification(`${USERS[userID].name} paused the video.`);
+    blockEvent.pause = true;
+    video.pause();
+  });
+  party_socket.on('seeked', (userID, t) => {
+    appendNotification(`${USERS[userID].name} jumped forward to ${(t / 3600).toFixed()}:${(t % 3600).toFixed()}:${(t % 60).toFixed()}`)
+
+    blockEvent.play = true;
+    video.play();
+    blockEvent.seek = true;
+    video.currentTime = t;
+    
+    var wasPaused = video.paused;
+
+    blockEvent.pause = true;
+    video.pause();
+
+    if (!wasPaused) {
+      blockEvent.play = true
+      video.play();
+    }
+  });
+
+  video.addEventListener('playing', () => {
+    console.log("PLAY");
+    if (blockEvent.play) {
+      blockEvent.play = false;
+      return;
+    }
+
+    party_socket.emit('play', myUUID);
+  });
+
+  video.addEventListener('pause', () => {
+    if (blockEvent.pause) {
+      blockEvent.pause = false;
+      return;
+    }
+
+    party_socket.emit('pause', myUUID);
+  })
+
+  video.addEventListener('seeked', () => {
+    if (blockEvent.seek) {
+      blockEvent.seek = false;
+      return;
+    }
+
+    party_socket.emit('seeked', myUUID, video.currentTime + 10);
+  })
+}
+
+function configureChatListeners() {
+  $('#clink-chat-form textarea').keydown((e) => {
+    if (e.keyCode == 13) {
+      e.preventDefault();
+      if ($('#clink-chat-form textarea').val())
+        $('#clink-chat-form').submit();
+    }
+  })
+  $('#clink-chat-form').submit((e) => {
+    e.preventDefault();
+
+    var msg = $('#clink-chat-form textarea').val();
+    $('#clink-chat-form textarea').val('');
+    party_socket.emit('send message', myUUID, msg);
+    appendMessage(myUUID, msg);
+  })
+
+  $('.clink-header .avatar-img').click((e) => {
+    saveMessages = $('.clink-chat li');
+
+    injectJoinParty();
+  });
+}
+
+function updateAvatars (userID) {
+  if (USERS[userID]) {
+    $(`.avatar-img[data-user-id=${userID}]`).attr('src',
+      chrome.runtime.getURL(`images/avatars/${USERS[userID].avatar}.png`)
+    );
+    $(`.message-name[data-user-id=${userID}]`).text(USERS[userID].name);
   }
-}
+};
 
-// $(document).ready(() => {
-//   typeWriter($('.typing-indicator p'), 'Someone is typing...', 0, 50);
-
-//   $('#clink-chat-textarea').keydown((e) => {
-//     if (e.keyCode == 13) {
-//       if (e.ctrlKey) {
-//         // link break
-//         return true;
-//       }
-//       e.preventDefault();
-//       $('#clink-chat-form').submit();
-//     }
-//   });
-
-//   $('#clink-chat-form').submit((e) => {
-//     e.preventDefault();
-
-//     const msg = $('#clink-chat-textarea').val();
-//     $('#clink-chat-textarea').val('');
-//     $('#clink-chat-textarea').focus();
-
-//     sendMessage(msg);
-//   })
-
-//   $('#dv-web-player').addClass('clink-show-chat');
-
-//   if ($('.clink-chat').length == 0) {
-//     console.log('Trying to add...');
-//     $('#dv-web-player').after(`
-//     `);
-// }
-// });
-
-function typeWriter(target, txt, i, speed) {
-  if (i <= txt.length) {
-    target.text(txt.substring(0, i));
-    i++;
-    setTimeout(typeWriter, speed + Math.random() * speed, target, txt, i, speed);  
-  } else {
-    target.innerHTML = '';
-    i = 0;
-    setTimeout(typeWriter, speed * 10, target, txt, i, speed);  
-  }
-}
-
-function appendNotication(msg) {
- $('#clink-messages').append(
-`
-<li class="list-group-item px-0 border-0">
-  <p class="mb-0 text-accent">${msg}</p>
-</li>
-`
- )
-}
-
-function appendMessage(msg, avatar, name) {
-  if (msg.startsWith('\\GIF:')) {
-    msg = `<img src="${msg.substring(5)}"/>`
-  }
-  $('#clink-messages').append(
-`
-<li class="list-group-item px-0 border-0">
-<div class="row align-items-start">
-  <div class="col-auto">
-    <img class="avatar avatar-${name}" src="${chrome.extension.getURL(`images/avatars/${avatar}.png`)}" />
-  </div>
-  <div class="col pl-0">
-    <div class="flex-column align-items-start">
-      <h6 class="mb-0 text-accent">${name}</h6>
-      <p class="mb-1" style="word-break: break-all">
-        ${msg}
-      </p>
-    </div>
-  </div>  
-</div>
-</li>
-`
+// TODO implement message IDs for deletion
+function appendMessage(userID, msg) {
+  $('<div>').load(
+    chrome.runtime.getURL('templates/message.html'),
+    (el) => {
+      var $element = $(el)
+      $element.find('.avatar-img').attr('data-user-id', userID).attr('src',
+      chrome.runtime.getURL(`images/avatars/${USERS[userID].avatar}.png`));
+      $element.find('.message-name').data('user-id', userID).text(USERS[userID].name);
+      $element.find('.message-content').html(msg);
+      $element.appendTo('.clink-chat');
+    }
   )
+}
 
-  $('.clink-message-wrapper').animate({
-    scrollTop: $('#clink-messages').height()
-  }, 250);
+function appendNotification(msg) {
+  $('.clink-chat').append(`
+  <li class="list-group-item no-shadow bg-transparent px-2">
+  ${msg}
+  </li>
+  `);
 }

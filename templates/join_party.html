@@ -1,0 +1,48 @@
+<div class="d-flex align-items-center flex-column no-gutters h-100 w-100">
+  <div style="width: 100% !important" class="col-4 row align-items-center">
+    <div class="text-center">
+    <img width="100%" class="clink-logo-large" />
+    <h3 class="mt-1 text-accent">Clink!</h3>
+    </div>
+  </div>
+  <div class="col-auto">
+    <form action="">
+      <div class="form-group">
+        <label for="party-name">
+          Party Name:
+        </label>
+        <input id="party-name" class="text-accent bg-dark form-control" />
+      </div>
+      <label>Choose an avatar:</label>
+      <div class="avatar-selection row no-gutters justify-content-center">
+        <div class="col-auto p-1">
+          <input checked name="avatar-selection" value="clink_pink" type="radio" id="select-avatar-clink_pink" />
+          <label for="select-avatar-clink_pink"><img data-avatar-name="clink_pink" class="avatar-img" src=""/></label>  
+        </div>
+        <div class="col-auto p-1">
+          <input name="avatar-selection" value="clink_orange" type="radio" id="select-avatar-clink_orange" />
+          <label for="select-avatar-clink_orange"><img data-avatar-name="clink_orange" class="avatar-img" src=""/></label>  
+        </div>
+        <div class="col-auto p-1">
+          <input name="avatar-selection" value="clink_blue" type="radio" id="select-avatar-clink_blue" />
+          <label for="select-avatar-clink_blue"><img data-avatar-name="clink_blue" class="avatar-img" src=""/></label>  
+        </div>
+        <div class="col-auto p-1">
+          <input name="avatar-selection" value="martini" type="radio" id="select-avatar-martini" />
+          <label for="select-avatar-martini"><img data-avatar-name="martini" class="avatar-img" src=""/></label>  
+        </div>
+        <div class="col-auto p-1">
+          <input name="avatar-selection" value="whiskey" type="radio" id="select-avatar-whiskey" />
+          <label for="select-avatar-whiskey"><img data-avatar-name="whiskey" class="avatar-img" src=""/></label>  
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="name-selection">Display Name:</label>
+        <input placeholder="Anonymous" id="name-selection" class="text-accent bg-dark form-control" />
+      </div>
+      <div class="text-center">
+        <button type="submit" class="btn btn-dark text-accent">Join Party</button>
+      </div>
+    </form>
+  </div>
+</div>
