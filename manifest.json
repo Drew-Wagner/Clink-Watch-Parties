@@ -13,7 +13,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://www.primevideo.com/*"],
+      "matches": ["http://www.primevideo.com/*", "https://www.primevideo.com/*"],
       "run_at": "document_end",
       "css": ["content.css", "thirdparty/bootstrap.min.css"],
       "js": ["thirdparty/fontawesome.js", "thirdparty/socket.io.js", "thirdparty/jquery.min.js", "content.js"]
