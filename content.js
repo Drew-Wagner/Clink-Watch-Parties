@@ -19,6 +19,7 @@ var party_socket;
 
 var showClink = false;
 var typingCount = 0;
+var typingTimeout = null;
 
 var blockEvent = {
   play: false,
@@ -63,8 +64,13 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
 
 function toggleClink() {
   showClink = !showClink;
-  $('#clink-container').toggleClass('clink-show');
-  $('#dv-web-player').toggleClass('clink-show');
+  if (showClink) {
+    $('#clink-container').addClass('clink-show');
+    $('#dv-web-player').addClass('clink-show');  
+  } else {
+    $('#clink-container').removeClass('clink-show');
+    $('#dv-web-player').removeClass('clink-show');  
+  }
 };
 
 function injectClink() {
@@ -150,8 +156,6 @@ function setupPartySocket() {
   });
 
   party_socket.on('present', (sockID, userID, user) => {
-    console.log('someone is here', userID, user);
-
     appendNotification(`${user.name} is here.`);
     USERS[userID] = user;
     mapSockIDtoUserID[sockID] = userID;
@@ -191,7 +195,9 @@ function setupPartySocket() {
       typingCount++;
       $('.typing-indicator').removeClass('d-none');
     } else {
-      if (--typingCount == 0) {
+      typingCount--;
+      if (typingCount <= 0) {
+        typingCount = 0;
         $('.typing-indicator').addClass('d-none');
       }
     }
@@ -227,7 +233,6 @@ function setupPartySocket() {
   });
 
   video.addEventListener('playing', () => {
-    console.log("PLAY");
     if (blockEvent.play) {
       blockEvent.play = false;
       return;
@@ -256,6 +261,34 @@ function setupPartySocket() {
 }
 
 function configureChatListeners() {
+  $('.clink-header .share-link-btn').click((e) => {
+    let url = window.location.href.split('?')[0];
+    url = url + '?autoplay=1&party_name=' + partyName;
+
+    var tmpElement = document.createElement('textarea');
+    tmpElement.value = url;
+
+    document.body.appendChild(tmpElement);
+    tmpElement.select();
+
+    document.execCommand('copy');
+
+    document.body.removeChild(tmpElement);
+
+    $('#url-copied-message').text('URL has been copied to clipboard').show().fadeOut(3000, function () {$(this).hide()});
+
+  });
+  $('#clink-chat-form textarea').on('input', (e) => {
+    clearTimeout(typingTimeout);
+    if (!typingTimeout) {
+      party_socket.emit('typing', true);
+    }
+    typingTimeout = setTimeout(() => {
+      party_socket.emit('typing', false);
+      typingTimeout = null;
+    }, 500);
+  });
+
   $('#clink-chat-form textarea').keydown((e) => {
     if (e.keyCode == 13) {
       e.preventDefault();
@@ -290,6 +323,8 @@ function updateAvatars (userID) {
 
 // TODO implement message IDs for deletion
 function appendMessage(userID, msg) {
+  let $container = $('.clink-chat');
+
   $('<div>').load(
     chrome.runtime.getURL('templates/message.html'),
     (el) => {
@@ -301,6 +336,10 @@ function appendMessage(userID, msg) {
       $element.appendTo('.clink-chat');
     }
   )
+
+  $('.clink-chat').animate({
+    'scrollTop': $('.clink-chat').prop('scrollHeight')
+  }, 250);
 }
 
 function appendNotification(msg) {
@@ -309,4 +348,8 @@ function appendNotification(msg) {
   ${msg}
   </li>
   `);
+
+  $('.clink-chat').animate({
+    'scrollTop': $('.clink-chat').prop('scrollHeight')
+  }, 250);
 }

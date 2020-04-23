@@ -19,14 +19,57 @@
   transition: visibility 0.5s, width 0.5s ease;
   background: #222222;
   
-  color: #c8a6b5;
+  color: #c8a6b5 !important;
   font-size: small;
+}
+
+#clink-container ::-webkit-scrollbar {
+  width: 4px;
+}
+
+#clink-container ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#clink-container ::-webkit-scrollbar-thumb {
+  background: #ff6978de;
+}
+
+#clink-container ::-webkit-scrollbar-thumb:hover {
+  background: #ff6978;
+}
+
+#clink-container ul {
+  color: #c8a6b5 !important;
+  overflow-y: scroll;
+  overflow-x: hidden;
 }
 
 #clink-container.clink-show {
   width: 300px;
   visibility: visible;
 }
+
+.clink-header .avatar-img {
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.clink-header .avatar-img:hover {
+  opacity: 1;
+}
+
+.clink-header .share-link-btn {
+  opacity: 0.87;
+  color: #c8a6b5;
+  cursor: pointer;
+  font-size: large;
+}
+
+.clink-header .share-link-btn:hover {
+  opacity: 1;
+}
+
 
 .clink-chat {
   background: #121212;
